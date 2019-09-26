@@ -4,31 +4,47 @@
 #include <iomanip>
 #include <string>
 #include <algorithm>
+#include <cctype>
 Gamemap::Gamemap() noexcept {
 	ChooseSize();
 	drawMap();
 }
 
-void Gamemap::ChooseSize() {
-	std::cout << "Choose size of map:\n[1]Small\n[2]Medium\n[3]Big\n[4]Rules\n";
-	char uChoice = SafelyGetUserInput();
-	switch (uChoice) {
-	case '1':
-		msize = MapSize::Small; break;
-	case '2':
-		msize = MapSize::Medium; break;
-	case '3': 
-		msize = MapSize::Big; break;
-	case '4':
-		showRules(); break;
+template <class T, class X >
+constexpr bool look_for(const T & set, const X sought) {
+	return std::find(std::begin(set), std::end(set), sought) != std::end(set);
+}
+
+template<typename T>
+constexpr bool checkForAlpha(const T &container) {
+	for (const auto &it : container) {
+		if (isalpha(it))
+			return true;
 	}
+	return false;
+}
+
+void Gamemap::ChooseSize() {
+	char uChoice;
+	do {
+		std::cout << "Choose size of map:\n[1]Small\n[2]Medium\n[3]Big\n[4]Rules\n";
+		uChoice = SafelyGetUserInput();
+		switch (uChoice) {
+		case '1':
+			msize = MapSize::Small; break;
+		case '2':
+			msize = MapSize::Medium; break;
+		case '3':
+			msize = MapSize::Big; break;
+		case '4':
+			showRules(); break;
+		}
+	} while (uChoice == '4');
 }
 
 void Gamemap::RedrawMap() {
 	std::cout << "RedrawMap()\n";
 }
-
-void getUserData();
 
 void Gamemap::LetPlayerPlaceShips() {
 	std::cout << "Place your ships in formula: [Type][Orientation][Coordinates]\n"
@@ -38,7 +54,7 @@ void Gamemap::LetPlayerPlaceShips() {
 }
 
 void Gamemap::PlaceShipsByAI() {
-	std::cout << "PlaceShipsByAI()\n";
+	std::cout << "PlaceShipsByAI();\n";
 }
 
 void writeLetters(size_t);
@@ -70,10 +86,11 @@ void Gamemap::drawMap() {
 }
 
 void Gamemap::showRules() const {
-	std::cout << "\nRules are pretty simple:\nWhen map is ready, firstly what you have to do is to\n"
-		<< "select ship and type exact coordinates you want to put ship at.\n"
-		<< "Then say if you want place ship horizontally or vertically.\n"
-		<< "Place like that all of your ships and you're done :)\n";
+	std::cout << "\nRules are pretty simple:\nWhen map is ready, first thing what you have to do is to\n"
+		"select ship and type exact coordinates you want to put ship at using formula\n"
+		"[Type][Orientation][Coordinates] like in this example:\n"
+		"user input: CVA4\t([Carrier][Vertical][Coordinates A4])\n"
+		"Place like that all of your ships and you're done :)\n\n";
 }
 
 size_t Gamemap::getMapSize() {
@@ -82,7 +99,7 @@ size_t Gamemap::getMapSize() {
 
 auto SafelyGetUserInput() -> char {
 	char uInput = _getch();
-	while (std::strchr("1234", uInput) == nullptr) {
+	while (!look_for("1234", uInput)) {
 		std::cout << "Please type 1, 2, 3 or 4.\n";
 		uInput = _getch();
 	}
@@ -105,44 +122,51 @@ void printMap(size_t amount) {
 	}
 }
 
-bool checkIfInputIsCorrect(std::string &);
-
-void getUserData() {
+void Gamemap::getUserData() {
 	std::string userInput;
 	std::getline(std::cin, userInput);
 	while(!checkIfInputIsCorrect(userInput)) {
+		placeShipOnMap(userInput);
+
+
 		std::getline(std::cin, userInput);
 	}
 	std::cout << "all input tests passed\n";
 }
 
+void Gamemap::placeShipOnMap(const std::string &input) {
+	std::cout << "XD";
+}
+
 bool checkProperTypeOfShip(char);
 bool checkOrientation(char);
-bool checkCoordinates(std::string &);
 
-bool checkIfInputIsCorrect(std::string & userInput) {
+bool Gamemap::checkIfInputIsCorrect(std::string & userInput) {
+	std::string coords;
 	if (userInput.length() < 4) {
 		std::cout << "Missing data.\n";
 		return false;
 	}
-	bool shipsGood = checkProperTypeOfShip(userInput[0]);
-	bool orientationGood = checkOrientation(userInput[1]);
-	std::string coords;
-	if (userInput.length() == 4) {
+
+	else if (userInput.length() == 4) {
 		coords.push_back(userInput[2]);
 		coords.push_back(userInput[3]);
 	}
 
-	if (userInput.length() == 5) {
+	else if (userInput.length() == 5) {
 		for (size_t i = 2; i < 5; ++i)
 			coords.push_back(userInput[i]);
 	}
 
-	if (userInput.length() > 5) {
+	else {
 		std::cout << "Too high number.\n";
 		return false;
 	}
+
+	bool shipsGood = checkProperTypeOfShip(userInput[0]);
+	bool orientationGood = checkOrientation(userInput[1]);
 	bool coordinatesGood = checkCoordinates(coords);
+
 	if (shipsGood && orientationGood && coordinatesGood)
 		return true;
 	else
@@ -150,7 +174,7 @@ bool checkIfInputIsCorrect(std::string & userInput) {
 }
 
 bool checkProperTypeOfShip(char shipType) {
-	if (std::strchr("BDICbdic", shipType) == nullptr) {
+	if (!look_for("BDICbdic", shipType)) { 
 		std::cout << "Wrong type of the ship (type B/D/I/C).\n";
 		return false;
 	}
@@ -167,10 +191,7 @@ bool checkOrientation(char orientation) {
 	}
 }
 
-bool checkAlpha(char);
-bool checkNumber(std::string);
-
-bool checkCoordinates(std::string & coords) {
+bool Gamemap::checkCoordinates(std::string & coords) {
 	std::transform(coords.begin(), coords.end(), coords.begin(), ::toupper);
 	std::string digits;
 	digits.push_back(coords[1]);
@@ -179,11 +200,6 @@ bool checkCoordinates(std::string & coords) {
 
 	bool alphaGood = checkAlpha(coords[0]);
 	bool numberGood = checkNumber(digits);
-	
-	if (!alphaGood)
-		std::cout << "You entered wrong character.\n";
-	if (!numberGood)
-		std::cout << "You entered wrong number.\n";
 
 	if (numberGood == true && alphaGood == true)
 		return true;
@@ -191,18 +207,23 @@ bool checkCoordinates(std::string & coords) {
 		return false;
 }
 
-bool checkAlpha(char letter) {
-	for (size_t character = 65; character < 20 + 65; ++character) { //!!ACTUALLY WORKS ONLY AT MEDIUM MAP!! because static mapsize isn't init, program won't compile
+bool Gamemap::checkAlpha(char letter) {
+	for (size_t character = 65; character < mapSize + 65; ++character) { 
 		if (static_cast<char>(character) == letter)
 			return true;
 	}
+	std::cout << "You entered wrong character.\n";
 	return false;
 }
 
-bool checkNumber(std::string numbers) {
-	for (size_t number = 1; number <= 20; ++number) { //later get rid of these 20's in loops
+bool Gamemap::checkNumber(const std::string & numbers) {
+	if (checkForAlpha(numbers))
+		return false;
+
+	for (size_t number = 1; number <= mapSize; ++number) {
 		if (number == std::stoi(numbers))
 			return true;
 	}
+	std::cout << "You entered wrong number.\n";
 	return false;
 }
